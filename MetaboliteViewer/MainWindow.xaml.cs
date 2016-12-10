@@ -33,6 +33,7 @@ namespace MetaboliteViewer {
         }
         public string TestText { get; set; }
         bool isFinished = false;
+        bool playSound = true;
 
         public MainWindow() {
             InitializeComponent();
@@ -171,7 +172,9 @@ namespace MetaboliteViewer {
             } else {
                 getStuff();
             }
-            //playSimpleSound();
+            if (playSound) {
+                playSimpleSound();
+            }
         }
 
         private void playSimpleSound() {
@@ -184,6 +187,10 @@ namespace MetaboliteViewer {
             if (PropertyChanged != null) {
                 PropertyChanged(this, new PropertyChangedEventArgs(info));
             }
+        }
+
+        private void IsMuted_Checked(object sender, RoutedEventArgs e) {
+            playSound = (bool) IsMuted.IsChecked;
         }
 
         private void loadPathways() {
@@ -690,5 +697,7 @@ namespace MetaboliteViewer {
             Pathways.Add("N-Metyl-D-aspartic acid receptor antagonists");
 
         }
+
+
     }
 }
