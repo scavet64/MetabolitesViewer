@@ -161,6 +161,10 @@ namespace MetaboliteViewer {
             simpleSound.Stop();
         }
 
+        private void WindowMouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+            DragMove();
+        }
+
         private void Button_Click(object sender, RoutedEventArgs e) {
             if(pathwayField.Text != string.Empty) {
                 getPathwayImage();

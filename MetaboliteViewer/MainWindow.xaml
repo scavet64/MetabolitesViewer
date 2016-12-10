@@ -6,6 +6,8 @@
         xmlns:local="clr-namespace:MetaboliteViewer"
         mc:Ignorable="d"
         ResizeMode="NoResize"
+        WindowStyle="SingleBorderWindow"
+        MouseLeftButtonDown="WindowMouseLeftButtonDown"
         xmlns:gif="clr-namespace:XamlAnimatedGif;assembly=XamlAnimatedGif"
         Title="Metabolomics Viewer" Height="700" Width="1000"
             xmlns:behaviors="clr-namespace:WPFTextBoxAutoComplete;assembly=WPFTextBoxAutoComplete"
