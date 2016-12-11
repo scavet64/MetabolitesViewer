@@ -115,6 +115,9 @@
     <Resource Include="Data\giphy.gif">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Data\NotFound.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
     <Content Include="Data\rur4t.wav">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

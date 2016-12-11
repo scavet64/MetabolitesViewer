@@ -140,7 +140,16 @@ namespace MetaboliteViewer {
             else
             {
                 //nothing found
-                displayImage.Source = new BitmapImage(new Uri(@"data\notfound.jpg", UriKind.RelativeOrAbsolute));
+                Uri notFoundImage;
+                if (FunMode)
+                {
+                    notFoundImage = new Uri(@"data\notfound.jpg", UriKind.RelativeOrAbsolute);
+                }
+                else
+                {
+                    notFoundImage = new Uri(@"data\NotFound.png", UriKind.RelativeOrAbsolute);
+                }
+                displayImage.Source = new BitmapImage(notFoundImage);
             }
 
             Cursor = Cursors.Arrow;
