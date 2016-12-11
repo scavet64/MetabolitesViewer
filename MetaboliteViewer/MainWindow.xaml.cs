@@ -33,7 +33,7 @@ namespace MetaboliteViewer {
         }
         public string TestText { get; set; }
         bool isFinished = false;
-        bool playSound = true;
+        bool FunMode = false;
 
         public MainWindow() {
             InitializeComponent();
@@ -74,41 +74,71 @@ namespace MetaboliteViewer {
             isFinished = true;
         }
 
-        private async Task getStuff() {
-            waitImageBorder.Visibility = Visibility.Visible;
+        private async Task GetFromKegg(SearchTerm st)
+        {
             Cursor = Cursors.AppStarting;
 
             string result;
-            string UserInput = CompoundNameField.Text;
-            string compoundsNameInShitbase = string.Empty;
+            string userInput;
+            string baseURL = "http://rest.kegg.jp/list/";
+            string databaseID = string.Empty;
+            int subStringStart;
+            int substringLength;
 
-            string baseUrl = "http://rest.kegg.jp/list/compound";
-
-            using (HttpClient client = new HttpClient()) {
-                result = await client.GetStringAsync(baseUrl);
+            if (st == SearchTerm.compound)
+            {
+                userInput = CompoundNameField.Text;
+                baseURL += @"compound";
+                substringLength = 6;
+                subStringStart = 4;
+            }
+            else
+            {
+                userInput = pathwayField.Text;
+                baseURL += @"pathway";
+                subStringStart = 5;
+                substringLength = 8;
+                
             }
 
-            string[] splitshit = result.Split('\n');
-            string pattern = @"\s" + UserInput + @";";
-            foreach (string item in splitshit) {
-                string temp = item;
-                temp += ";";
-                if (Regex.IsMatch(temp, pattern, RegexOptions.IgnoreCase)) {
+            using(HttpClient client = new HttpClient())
+            {
+                result = await client.GetStringAsync(baseURL);
+            }
+
+            string[] databaseRowArray = result.Split('\n');
+            string pattern = @"\s" + userInput + @";";
+            foreach (string item in databaseRowArray)
+            {
+                string tempItem = item;
+                tempItem += ";";
+                if (Regex.IsMatch(tempItem, pattern, RegexOptions.IgnoreCase))
+                {
                     //we got it fam
-                    compoundsNameInShitbase = item.Substring(4, 6);
+                    databaseID = item.Substring(subStringStart, substringLength);
                     break;
                 }
             }
 
-            if (!compoundsNameInShitbase.Equals(string.Empty)) {
-                string geturl = "http://rest.kegg.jp/get/" + compoundsNameInShitbase + "//image";
-                using (WebClient client = new WebClient()) {
-                    if (!File.Exists(@"c:\temp\" + compoundsNameInShitbase + ".gif")) {
-                        client.DownloadFile(new Uri(geturl), @"c:\temp\" + compoundsNameInShitbase + ".gif");
+            if (!databaseID.Equals(string.Empty))
+            {
+                string geturl = "http://rest.kegg.jp/get/" + databaseID + "//image";
+                using (WebClient client = new WebClient())
+                {
+                    if (!File.Exists(@"c:\temp\" + databaseID + ".gif"))
+                    {
+                        if (!Directory.Exists(@"c:\temp\"))
+                        {
+                            //create dir
+                            Directory.CreateDirectory(@"c:\temp\");
+                        }
+                        client.DownloadFile(new Uri(geturl), @"c:\temp\" + databaseID + ".gif");
                     }
-                    displayImage.Source = new BitmapImage(new Uri(@"c:\temp\" + compoundsNameInShitbase + ".gif", UriKind.RelativeOrAbsolute));
+                    displayImage.Source = new BitmapImage(new Uri(@"c:\temp\" + databaseID + ".gif", UriKind.RelativeOrAbsolute));
                 }
-            } else {
+            }
+            else
+            {
                 //nothing found
                 displayImage.Source = new BitmapImage(new Uri(@"data\notfound.jpg", UriKind.RelativeOrAbsolute));
             }
@@ -116,50 +146,7 @@ namespace MetaboliteViewer {
             Cursor = Cursors.Arrow;
             waitImageBorder.Visibility = Visibility.Hidden;
             simpleSound.Stop();
-        }
 
-        private async Task getPathwayImage() {
-            waitImageBorder.Visibility = Visibility.Visible;
-            Cursor = Cursors.AppStarting;
-
-            string result;
-            string UserInput = pathwayField.Text;
-            string compoundsNameInShitbase = string.Empty;
-
-            string baseUrl = "http://rest.kegg.jp/list/pathway";
-
-            using (HttpClient client = new HttpClient()) {
-                result = await client.GetStringAsync(baseUrl);
-            }
-
-            string[] splitshit = result.Split('\n');
-            string pattern = @"\s" + UserInput + @";";
-            foreach (string item in splitshit) {
-                string temp = item;
-                temp += ";";
-                if (Regex.IsMatch(temp, pattern, RegexOptions.IgnoreCase)) {
-                    //we got it fam
-                    compoundsNameInShitbase = item.Substring(5, 8);
-                    break;
-                }
-            }
-
-            if (!compoundsNameInShitbase.Equals(string.Empty)) {
-                string geturl = "http://rest.kegg.jp/get/" + compoundsNameInShitbase + "//image";
-                using (WebClient client = new WebClient()) {
-                    if (!File.Exists(@"c:\temp\" + compoundsNameInShitbase + ".gif")) {
-                        client.DownloadFile(new Uri(geturl), @"c:\temp\" + compoundsNameInShitbase + ".gif");
-                    }
-                    displayImage.Source = new BitmapImage(new Uri(@"c:\temp\" + compoundsNameInShitbase + ".gif", UriKind.RelativeOrAbsolute));
-                }
-            } else {
-                //nothing found
-                displayImage.Source = new BitmapImage(new Uri(@"data\notfound.jpg", UriKind.RelativeOrAbsolute));
-            }
-
-            Cursor = Cursors.Arrow;
-            waitImageBorder.Visibility = Visibility.Hidden;
-            simpleSound.Stop();
         }
 
         private void WindowMouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
@@ -167,13 +154,16 @@ namespace MetaboliteViewer {
         }
 
         private void Button_Click(object sender, RoutedEventArgs e) {
+            SearchTerm st;
             if(pathwayField.Text != string.Empty) {
-                getPathwayImage();
+                st = SearchTerm.pathway;
             } else {
-                getStuff();
+                st = SearchTerm.compound;
             }
-            if (playSound) {
+            GetFromKegg(st);
+            if (FunMode) {
                 playSimpleSound();
+                waitImageBorder.Visibility = Visibility.Visible;
             }
         }
 
@@ -190,7 +180,18 @@ namespace MetaboliteViewer {
         }
 
         private void IsMuted_Checked(object sender, RoutedEventArgs e) {
-            playSound = (bool) IsMuted.IsChecked;
+            FunMode = true;
+            
+        }
+
+        private void IsMuted_UnChecked(object sender, RoutedEventArgs e)
+        {
+            FunMode = false;
+        }
+
+        private enum SearchTerm
+        {
+            pathway, compound
         }
 
         private void loadPathways() {
