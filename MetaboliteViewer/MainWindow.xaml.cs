@@ -13,6 +13,7 @@ using System.ComponentModel;
 using System.Threading;
 
 namespace MetaboliteViewer {
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -51,6 +52,9 @@ namespace MetaboliteViewer {
             DataContext = this;
         }
 
+        /// <summary>
+        /// Loads the list of compounds
+        /// </summary>
         private async void loadList() {
             string result;
             string baseUrl = "http://rest.kegg.jp/list/compound";
@@ -74,6 +78,11 @@ namespace MetaboliteViewer {
             isFinished = true;
         }
 
+        /// <summary>
+        /// Sets the image to the searched compound or pathway
+        /// </summary>
+        /// <param name="st">SearchTerm determining if we are looking for a compound or pathway</param>
+        /// <returns></returns>
         private async Task GetFromKegg(SearchTerm st)
         {
             Cursor = Cursors.AppStarting;
@@ -158,10 +167,20 @@ namespace MetaboliteViewer {
 
         }
 
+        /// <summary>
+        /// Moves the window when clicked
+        /// </summary>
+        /// <param name="sender">Sender</param>
+        /// <param name="e">args</param>
         private void WindowMouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
             DragMove();
         }
 
+        /// <summary>
+        /// Main search button for the program
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Button_Click(object sender, RoutedEventArgs e) {
             SearchTerm st;
             if(pathwayField.Text != string.Empty) {
