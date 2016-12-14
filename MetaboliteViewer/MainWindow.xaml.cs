@@ -11,6 +11,8 @@ using System.Collections.Generic;
 using System.Windows.Data;
 using System.ComponentModel;
 using System.Threading;
+using System.Xml.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace MetaboliteViewer {
 
@@ -33,8 +35,17 @@ namespace MetaboliteViewer {
             }
         }
         public string TestText { get; set; }
-        bool isFinished = false;
-        bool FunMode = false;
+        private bool isFinished = false;
+        private bool FunMode = false;
+
+        private static readonly string PROGRAM_DIRECTORY = Directory.GetCurrentDirectory();
+        private static readonly string DATA_FOLDER = PROGRAM_DIRECTORY + @"\Data\";
+        private static readonly string TEMP_FOLDER = DATA_FOLDER + @"Temp\";
+        private static readonly string IMG_FOLDER = DATA_FOLDER + @"Images\";
+        private static readonly string SAVED_COMPOUND_LIST = TEMP_FOLDER + @"SavedList.dat";
+        private static readonly string NOT_FOUND_IMG = DATA_FOLDER + @"NotFound.png";
+        public static string LOADING { get; set; } = DATA_FOLDER + @"magnify.gif";
+        public static string LOADINGFUN { get; set; } = DATA_FOLDER + @"giphy.gif";
 
         public MainWindow() {
             InitializeComponent();
@@ -56,26 +67,63 @@ namespace MetaboliteViewer {
         /// Loads the list of compounds
         /// </summary>
         private async void loadList() {
-            string result;
-            string baseUrl = "http://rest.kegg.jp/list/compound";
+            //check to see if we have a saved list of compounds
+            if (!File.Exists(SAVED_COMPOUND_LIST))
+            {
+                //get and load the list
+                string result;
+                string baseUrl = "http://rest.kegg.jp/list/compound";
 
-            using (HttpClient client = new HttpClient()) {
-                result = await client.GetStringAsync(baseUrl);
-            }
-            string[] splitshit = result.Split('\n');
-            foreach (string item in splitshit) {
-                string[] splitByTab = item.Split('\t');
-                if(splitByTab.Length > 1) {
-                    string[] splitBySemi = splitByTab[1].Split(';');
-                    foreach (string compound in splitBySemi) {
-                        TestItems.Add(compound.Trim());
-                    }
-                } else {
-
+                using (HttpClient client = new HttpClient())
+                {
+                    result = await client.GetStringAsync(baseUrl);
                 }
-
+                string[] splitshit = result.Split('\n');
+                foreach (string item in splitshit)
+                {
+                    string[] splitByTab = item.Split('\t');
+                    if (splitByTab.Length > 1)
+                    {
+                        string[] splitBySemi = splitByTab[1].Split(';');
+                        foreach (string compound in splitBySemi)
+                        {
+                            TestItems.Add(compound.Trim());
+                        }
+                    }
+                }
+                loadOrSaveCompoundListToFile(fileIoType.Save);
+            }
+            else
+            {
+                //load list from file
+                loadOrSaveCompoundListToFile(fileIoType.Load);
             }
             isFinished = true;
+        }
+
+        private void loadOrSaveCompoundListToFile(fileIoType type)
+        {
+            try
+            {
+                if (!Directory.Exists(TEMP_FOLDER))
+                {
+                    //create dir
+                    Directory.CreateDirectory(TEMP_FOLDER);
+                }
+                using (Stream stream = File.Open(SAVED_COMPOUND_LIST, FileMode.OpenOrCreate))
+                {
+                    BinaryFormatter bin = new BinaryFormatter();
+                    if(type == fileIoType.Load)
+                    {
+                        TestItems = (List<string>)bin.Deserialize(stream);
+                    }
+                    else
+                    {
+                        bin.Serialize(stream, TestItems);
+                    }
+                }
+            }
+            catch (IOException) { }
         }
 
         /// <summary>
@@ -134,16 +182,16 @@ namespace MetaboliteViewer {
                 string geturl = "http://rest.kegg.jp/get/" + databaseID + "//image";
                 using (WebClient client = new WebClient())
                 {
-                    if (!File.Exists(@"c:\temp\" + databaseID + ".gif"))
+                    if (!File.Exists(TEMP_FOLDER + databaseID + ".gif"))
                     {
-                        if (!Directory.Exists(@"c:\temp\"))
+                        if (!Directory.Exists(TEMP_FOLDER))
                         {
                             //create dir
-                            Directory.CreateDirectory(@"c:\temp\");
+                            Directory.CreateDirectory(TEMP_FOLDER);
                         }
-                        client.DownloadFile(new Uri(geturl), @"c:\temp\" + databaseID + ".gif");
+                        client.DownloadFile(new Uri(geturl), TEMP_FOLDER + databaseID + ".gif");
                     }
-                    displayImage.Source = new BitmapImage(new Uri(@"c:\temp\" + databaseID + ".gif", UriKind.RelativeOrAbsolute));
+                    displayImage.Source = new BitmapImage(new Uri(TEMP_FOLDER + databaseID + ".gif", UriKind.RelativeOrAbsolute));
                 }
             }
             else
@@ -153,16 +201,23 @@ namespace MetaboliteViewer {
                 if (FunMode)
                 {
                     notFoundImage = new Uri(@"data\notfound.jpg", UriKind.RelativeOrAbsolute);
+                    displayImage.MaxHeight = 10000;
+                    displayImage.MaxWidth = 10000;
                 }
                 else
                 {
-                    notFoundImage = new Uri(@"data\NotFound.png", UriKind.RelativeOrAbsolute);
+                    displayImage.MaxHeight = 400;
+                    displayImage.MaxWidth = 400;
+                    notFoundImage = new Uri(NOT_FOUND_IMG, UriKind.RelativeOrAbsolute);
                 }
+
                 displayImage.Source = new BitmapImage(notFoundImage);
             }
 
             Cursor = Cursors.Arrow;
             waitImageBorder.Visibility = Visibility.Hidden;
+            waitImageBorderNoFun.Visibility = Visibility.Hidden;
+            ImageBorder.Visibility = Visibility.Visible;
             simpleSound.Stop();
 
         }
@@ -188,10 +243,16 @@ namespace MetaboliteViewer {
             } else {
                 st = SearchTerm.compound;
             }
+            ImageBorder.Visibility = Visibility.Hidden;
             GetFromKegg(st);
             if (FunMode) {
                 playSimpleSound();
                 waitImageBorder.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                
+                waitImageBorderNoFun.Visibility = Visibility.Visible;
             }
         }
 
@@ -220,6 +281,11 @@ namespace MetaboliteViewer {
         private enum SearchTerm
         {
             pathway, compound
+        }
+
+        private enum fileIoType
+        {
+            Save,Load
         }
 
         private void loadPathways() {
@@ -727,6 +793,14 @@ namespace MetaboliteViewer {
 
         }
 
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
 
+        private void Button_Click_2(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
     }
 }

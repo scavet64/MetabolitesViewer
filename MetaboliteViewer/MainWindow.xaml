@@ -69,66 +69,77 @@
             </Setter>
         </Style>
     </Window.Resources>
+    <Border CornerRadius="5" Background="#394a75">
     <Grid>
-        <Grid Background="Gray">
-            <Border x:Name="ImageBorder" Background="Transparent" Height="525" HorizontalAlignment="Center" VerticalAlignment="Top" Width="974" Margin="10,10,10,0">
-                <ScrollViewer>
-                    <Image MinHeight="300" MinWidth="300" x:Name="displayImage"/>
-                </ScrollViewer>
-            </Border>
-            <Border Visibility="Hidden" x:Name="waitImageBorder" Background="Green" Height="525" HorizontalAlignment="Center" VerticalAlignment="Top" Width="974" Margin="0,10,0,0">
-                <Image x:Name="Spinner" Stretch="Fill" gif:AnimationBehavior.SourceUri="Data/giphy.gif"/>
-            </Border>
+        <Button Content="X" Height="20" Width="20" Margin="980,0,0,680" Click="Button_Click_1"/>
+        <Button Content="---" Height="20" Width="20" Margin="940,0,0,680" Click="Button_Click_2"/>
+            <Border Background="#667395" Margin="0,20,0,0" CornerRadius="0,0,5,5">
+            <Grid >
 
-
-
-            <DockPanel Margin="0,540,269,31" Height="100" Width="700">
-                <DockPanel DockPanel.Dock="Top" Height="50" Width="700">
-                    <Label x:Name="LabelTest" DockPanel.Dock="Left" FontSize="15" Content="PathWay" HorizontalAlignment="Center" VerticalAlignment="Center" Height="30" Width="100"/>
-                    <Border x:Name="TextBoxBorder" DockPanel.Dock="Right" Height="30" CornerRadius="10" Background="White" Width="600">
-                        <TextBox x:Name="pathwayField" 
-                         Height="30"
-                         AutoWordSelection="True" 
-                         TextAlignment="Center" 
-                         Background="Transparent" 
-                         BorderBrush="{x:Null}" 
-                         behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding Pathways}" 
-                         behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase"
-                         
-                         FontSize="18" BorderThickness="0"/>
-                    </Border>
-                </DockPanel>
-                <DockPanel Height="50" Width="700">
-                    <Border x:Name="TextBoxBorder2" DockPanel.Dock="Right" Height="30" Background="White" CornerRadius="10" Width="600" >
-                        <TextBox x:Name="CompoundNameField"
-                         TextAlignment="Center"
-                         Height="30"
-                         AutoWordSelection="True" 
-                         Background="Transparent" 
-                         BorderBrush="{x:Null}" 
-                         behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding TestItems}" 
-                         behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase"
-                         
-                         FontSize="18" Width="612" BorderThickness="0"/>
-                    </Border>
-                    <Label FontSize="15" DockPanel.Dock="Left" Content="Compound" HorizontalAlignment="Center" VerticalAlignment="Center" Height="30" Margin="0,10" Width="100"/>
-                </DockPanel>
-            </DockPanel>
-
-
-
-            <Border Margin="718,540,0,0" Height="100" Width="200" >
-                <Border x:Name="ButtonBorder" Height="51" CornerRadius="10" Background="Black" VerticalAlignment="Center" HorizontalAlignment="Center" Width="168" >
-                    <Button x:Name="GetButton" Background="Transparent" Click="Button_Click" VerticalAlignment="Center" BorderBrush="{x:Null}" Style="{DynamicResource ButtonStyle1}">
-                        <Button.Content>
-                            <TextBlock FontSize="25" Foreground="White"><Bold>Search</Bold></TextBlock>
-                        </Button.Content>
-                    </Button>
+                <Border x:Name="ImageBorder" Background="Transparent" Height="525" HorizontalAlignment="Center" VerticalAlignment="Top" Width="974" Margin="10,10,10,0">
+                    <ScrollViewer>
+                        <Image MinHeight="300" MinWidth="300" x:Name="displayImage"/>
+                    </ScrollViewer>
                 </Border>
-            </Border>
-            <CheckBox x:Name="IsMuted" Unchecked="IsMuted_UnChecked" Checked="IsMuted_Checked" Margin="0,0,976,653">
+                <Border Visibility="Hidden" x:Name="waitImageBorder" Background="Transparent" Height="525" HorizontalAlignment="Center" VerticalAlignment="Top" Width="974" Margin="0,10,0,0">
+                    <Image x:Name="Spinner" Stretch="Fill" gif:AnimationBehavior.SourceUri="{Binding Path=LOADINGFUN}"/>
+                </Border>
+                <Border Visibility="Hidden" x:Name="waitImageBorderNoFun" Background="Transparent" Width="300" Height="300" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="362,143,338,0">
+                    <!--<Image x:Name="search" Stretch="Fill" gif:AnimationBehavior.SourceUri="Data/magnify.gif"/>-->
+                    <Image x:Name="search" Stretch="Fill" gif:AnimationBehavior.SourceUri="{Binding Path=LOADING}"/>
+                </Border>
+
+
+
+                <DockPanel Margin="0,540,269,31" Height="100" Width="700">
+                    <DockPanel DockPanel.Dock="Top" Height="50" Width="700">
+                        <Label Foreground="White" x:Name="LabelTest" DockPanel.Dock="Left" FontSize="15" Content="PathWay" HorizontalAlignment="Center" VerticalAlignment="Center" Height="30" Width="100"/>
+                        <Border x:Name="TextBoxBorder" DockPanel.Dock="Right" Height="30" CornerRadius="10" Background="White" Width="600">
+                            <TextBox x:Name="pathwayField" 
+                             Height="30"
+                             AutoWordSelection="True" 
+                             TextAlignment="Center" 
+                             Background="Transparent" 
+                             BorderBrush="{x:Null}" 
+                             behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding Pathways}" 
+                             behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase"
+                         
+                             FontSize="18" BorderThickness="0"/>
+                        </Border>
+                    </DockPanel>
+                    <DockPanel Height="50" Width="700">
+                        <Border x:Name="TextBoxBorder2" DockPanel.Dock="Right" Height="30" Background="White" CornerRadius="10" Width="600" >
+                            <TextBox x:Name="CompoundNameField"
+                             TextAlignment="Center"
+                             Height="30"
+                             AutoWordSelection="True" 
+                             Background="Transparent" 
+                             BorderBrush="{x:Null}" 
+                             behaviors:AutoCompleteBehavior.AutoCompleteItemsSource="{Binding TestItems}" 
+                             behaviors:AutoCompleteBehavior.AutoCompleteStringComparison="InvariantCultureIgnoreCase"
+                         
+                             FontSize="18" Width="612" BorderThickness="0"/>
+                        </Border>
+                        <Label Foreground="White" FontSize="15" DockPanel.Dock="Left" Content="Compound" HorizontalAlignment="Center" VerticalAlignment="Center" Height="30" Margin="0,10" Width="100"/>
+                    </DockPanel>
+                </DockPanel>
+
+
+
+                <Border Margin="718,540,0,0" Height="100" Width="200" >
+                    <Border x:Name="ButtonBorder" Height="51" CornerRadius="10" Background="Black" VerticalAlignment="Center" HorizontalAlignment="Center" Width="168" >
+                        <Button x:Name="GetButton" Background="Transparent" Click="Button_Click" VerticalAlignment="Center" BorderBrush="{x:Null}" Style="{DynamicResource ButtonStyle1}">
+                            <Button.Content>
+                                <TextBlock FontSize="25" Foreground="White"><Bold>Search</Bold></TextBlock>
+                            </Button.Content>
+                        </Button>
+                    </Border>
+                </Border>
+                <CheckBox x:Name="IsMuted" Unchecked="IsMuted_UnChecked" Checked="IsMuted_Checked" Margin="16,653,960,0">
                 
-            </CheckBox>
-        </Grid>
+                </CheckBox>
+            </Grid>
+        </Border>
     </Grid>
+    </Border>
 </Window>
