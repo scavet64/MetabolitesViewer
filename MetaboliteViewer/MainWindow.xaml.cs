@@ -8,39 +8,42 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.IO;
 using System.Collections.Generic;
-using System.Windows.Data;
 using System.ComponentModel;
 using System.Threading;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace MetaboliteViewer {
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window {
 
-        private System.Media.SoundPlayer simpleSound = new System.Media.SoundPlayer(@"Data\rur4t.wav");
-        public List<string> TestItems { get; set; } = new List<string>();
+        public event PropertyChangedEventHandler PropertyChanged;
+        public List<string> Compounds { get; set; } = new List<string>();
         public List<string> Pathways { get; set; } = new List<string>();
-        private string _statusMessage;
-        public string StatusMessage {
-            get {
-                return _statusMessage;
-            }
-            set {
-                _statusMessage = value;
-                NotifyPropertyChanged("LastName");
-            }
-        }
-        public string TestText { get; set; }
-        bool isFinished = false;
-        bool playSound = true;
+        private bool isFinished = false;
+        private bool FunMode = false;
 
+        //readonly path strings
+        private static readonly string PROGRAM_DIRECTORY = Directory.GetCurrentDirectory();
+        private static readonly string DATA_FOLDER = PROGRAM_DIRECTORY + @"\Data\";
+        private static readonly string TEMP_FOLDER = DATA_FOLDER + @"Temp\";
+        private static readonly string IMG_FOLDER = DATA_FOLDER + @"Images\";
+        private static readonly string SAVED_COMPOUND_LIST = TEMP_FOLDER + @"SavedList.dat";
+        private static readonly string NOT_FOUND_IMG = DATA_FOLDER + @"NotFound.png";
+        private static readonly string NOT_FOUND_IMG_FUN = DATA_FOLDER + @"notfound.jpg";
+        private System.Media.SoundPlayer simpleSound = new System.Media.SoundPlayer(DATA_FOLDER + @"rur4t.wav");
+        public static string LOADING { get; set; } = DATA_FOLDER + @"magnify.gif";
+        public static string LOADINGFUN { get; set; } = DATA_FOLDER + @"giphy.gif";
+        public static string CLOSEIMAGE { get; set; } = DATA_FOLDER + @"fileclose.png";
+        public static string MINIMAGE { get; set; } = DATA_FOLDER + @"minus-7-xxl.png";
+
+        /// <summary>
+        /// Constructor for the window
+        /// </summary>
         public MainWindow() {
             InitializeComponent();
-            TestItems.Add("H2O");
-            StatusMessage = "TESTING";
-            LabelTest.DataContext = _statusMessage;
-            TestText = "TESTIHG";
 
             loadPathways();
             Thread myThread = new Thread(new ThreadStart(loadList));
@@ -51,148 +54,293 @@ namespace MetaboliteViewer {
             DataContext = this;
         }
 
+        /// <summary>
+        /// Loads the list of compounds
+        /// </summary>
         private async void loadList() {
-            string result;
-            string baseUrl = "http://rest.kegg.jp/list/compound";
+            //check to see if we have a saved list of compounds
+            if (!File.Exists(SAVED_COMPOUND_LIST))
+            {
+                //get and load the list
+                string result;
+                string baseUrl = "http://rest.kegg.jp/list/compound";
 
-            using (HttpClient client = new HttpClient()) {
-                result = await client.GetStringAsync(baseUrl);
-            }
-            string[] splitshit = result.Split('\n');
-            foreach (string item in splitshit) {
-                string[] splitByTab = item.Split('\t');
-                if(splitByTab.Length > 1) {
-                    string[] splitBySemi = splitByTab[1].Split(';');
-                    foreach (string compound in splitBySemi) {
-                        TestItems.Add(compound.Trim());
-                    }
-                } else {
-
+                using (HttpClient client = new HttpClient())
+                {
+                    result = await client.GetStringAsync(baseUrl);
                 }
-
+                string[] splitshit = result.Split('\n');
+                foreach (string item in splitshit)
+                {
+                    string[] splitByTab = item.Split('\t');
+                    if (splitByTab.Length > 1)
+                    {
+                        string[] splitBySemi = splitByTab[1].Split(';');
+                        foreach (string compound in splitBySemi)
+                        {
+                            Compounds.Add(compound.Trim());
+                        }
+                    }
+                }
+                loadOrSaveCompoundListToFile(fileIoType.Save);
+            }
+            else
+            {
+                //load list from file
+                loadOrSaveCompoundListToFile(fileIoType.Load);
             }
             isFinished = true;
         }
 
-        private async Task getStuff() {
-            waitImageBorder.Visibility = Visibility.Visible;
-            Cursor = Cursors.AppStarting;
-
-            string result;
-            string UserInput = CompoundNameField.Text;
-            string compoundsNameInShitbase = string.Empty;
-
-            string baseUrl = "http://rest.kegg.jp/list/compound";
-
-            using (HttpClient client = new HttpClient()) {
-                result = await client.GetStringAsync(baseUrl);
-            }
-
-            string[] splitshit = result.Split('\n');
-            string pattern = @"\s" + UserInput + @";";
-            foreach (string item in splitshit) {
-                string temp = item;
-                temp += ";";
-                if (Regex.IsMatch(temp, pattern, RegexOptions.IgnoreCase)) {
-                    //we got it fam
-                    compoundsNameInShitbase = item.Substring(4, 6);
-                    break;
+        /// <summary>
+        /// Main method for accessing or modifying the saved list of compounds.
+        /// </summary>
+        /// <param name="type">The FileIO action you want to preform</param>
+        private void loadOrSaveCompoundListToFile(fileIoType type)
+        {
+            try
+            {
+                if (!Directory.Exists(TEMP_FOLDER))
+                {
+                    //create dir
+                    Directory.CreateDirectory(TEMP_FOLDER);
                 }
-            }
-
-            if (!compoundsNameInShitbase.Equals(string.Empty)) {
-                string geturl = "http://rest.kegg.jp/get/" + compoundsNameInShitbase + "//image";
-                using (WebClient client = new WebClient()) {
-                    if (!File.Exists(@"c:\temp\" + compoundsNameInShitbase + ".gif")) {
-                        client.DownloadFile(new Uri(geturl), @"c:\temp\" + compoundsNameInShitbase + ".gif");
+                using (Stream stream = File.Open(SAVED_COMPOUND_LIST, FileMode.OpenOrCreate))
+                {
+                    BinaryFormatter bin = new BinaryFormatter();
+                    if(type == fileIoType.Load)
+                    {
+                        Compounds = (List<string>)bin.Deserialize(stream);
                     }
-                    displayImage.Source = new BitmapImage(new Uri(@"c:\temp\" + compoundsNameInShitbase + ".gif", UriKind.RelativeOrAbsolute));
+                    else
+                    {
+                        bin.Serialize(stream, Compounds);
+                    }
                 }
-            } else {
-                //nothing found
-                displayImage.Source = new BitmapImage(new Uri(@"data\notfound.jpg", UriKind.RelativeOrAbsolute));
+            }
+            catch (IOException) { }
+        }
+
+        /// <summary>
+        /// Sets the image to the searched compound or pathway
+        /// </summary>
+        /// <param name="st">SearchTerm determining if we are looking for a compound or pathway</param>
+        /// <returns></returns>
+        private async Task GetFromKegg(SearchTerm st)
+        {
+            try {
+                Cursor = Cursors.AppStarting;
+
+                string result;
+                string userInput;
+                string baseURL = "http://rest.kegg.jp/list/";
+                string databaseID = string.Empty;
+                int subStringStart;
+                int substringLength;
+
+                if (st == SearchTerm.compound)
+                {
+                    userInput = CompoundNameField.Text;
+                    baseURL += @"compound";
+                    substringLength = 6;
+                    subStringStart = 4;
+                }
+                else
+                {
+                    userInput = pathwayField.Text;
+                    baseURL += @"pathway";
+                    subStringStart = 5;
+                    substringLength = 8;
+                
+                }
+
+                //make our web request
+                using(HttpClient client = new HttpClient())
+                {
+                    result = await client.GetStringAsync(baseURL);
+                }
+
+                //split the string result and extract the database ID
+                string[] databaseRowArray = result.Split('\n');
+                string pattern = @"\s" + userInput + @";";
+                foreach (string item in databaseRowArray)
+                {
+                    string tempItem = item;
+                    tempItem += ";";
+                    if (Regex.IsMatch(tempItem, pattern, RegexOptions.IgnoreCase))
+                    {
+                        //we got it fam
+                        databaseID = item.Substring(subStringStart, substringLength);
+                        break;
+                    }
+                }
+
+                //make the web request to get an image 
+                BitmapImage imageToDisplay = null;
+                if (!databaseID.Equals(string.Empty))
+                {
+                    string geturl = "http://rest.kegg.jp/get/" + databaseID + "//image";
+                    try {
+                        using (WebClient client = new WebClient()) {
+                            if (!File.Exists(TEMP_FOLDER + databaseID + ".gif")) {
+                                if (!Directory.Exists(TEMP_FOLDER)) {
+                                    //create dir
+                                    Directory.CreateDirectory(TEMP_FOLDER);
+                                }
+                                client.DownloadFile(new Uri(geturl), TEMP_FOLDER + databaseID + ".gif");
+                            }
+                            imageToDisplay = new BitmapImage(new Uri(TEMP_FOLDER + databaseID + ".gif", UriKind.RelativeOrAbsolute));
+                        }
+                    } catch (Exception ex){
+                        //problem downloading file
+                        setNotFoundImage(ref imageToDisplay);
+                    }
+
+                }
+                else
+                {
+                    //database id could not be found
+                    setNotFoundImage(ref imageToDisplay);
+                }
+
+                displayImage.MaxHeight = imageToDisplay.PixelHeight;
+                displayImage.MaxWidth = imageToDisplay.PixelWidth;
+                displayImage.Source = imageToDisplay;
+
+            } catch (Exception) {
+                MessageBox.Show("Something happened...");
             }
 
             Cursor = Cursors.Arrow;
             waitImageBorder.Visibility = Visibility.Hidden;
+            waitImageBorderNoFun.Visibility = Visibility.Hidden;
+            ImageBorder.Visibility = Visibility.Visible;
             simpleSound.Stop();
         }
 
-        private async Task getPathwayImage() {
-            waitImageBorder.Visibility = Visibility.Visible;
-            Cursor = Cursors.AppStarting;
-
-            string result;
-            string UserInput = pathwayField.Text;
-            string compoundsNameInShitbase = string.Empty;
-
-            string baseUrl = "http://rest.kegg.jp/list/pathway";
-
-            using (HttpClient client = new HttpClient()) {
-                result = await client.GetStringAsync(baseUrl);
-            }
-
-            string[] splitshit = result.Split('\n');
-            string pattern = @"\s" + UserInput + @";";
-            foreach (string item in splitshit) {
-                string temp = item;
-                temp += ";";
-                if (Regex.IsMatch(temp, pattern, RegexOptions.IgnoreCase)) {
-                    //we got it fam
-                    compoundsNameInShitbase = item.Substring(5, 8);
-                    break;
-                }
-            }
-
-            if (!compoundsNameInShitbase.Equals(string.Empty)) {
-                string geturl = "http://rest.kegg.jp/get/" + compoundsNameInShitbase + "//image";
-                using (WebClient client = new WebClient()) {
-                    if (!File.Exists(@"c:\temp\" + compoundsNameInShitbase + ".gif")) {
-                        client.DownloadFile(new Uri(geturl), @"c:\temp\" + compoundsNameInShitbase + ".gif");
-                    }
-                    displayImage.Source = new BitmapImage(new Uri(@"c:\temp\" + compoundsNameInShitbase + ".gif", UriKind.RelativeOrAbsolute));
-                }
+        /// <summary>
+        /// Method will set the passed in bitmap to have the correct not found image.
+        /// </summary>
+        /// <param name="imageToDisplay">Bitmap image to set, passed by reference</param>
+        private void setNotFoundImage(ref BitmapImage imageToDisplay) {
+            if (FunMode) {
+                imageToDisplay = new BitmapImage(new Uri(NOT_FOUND_IMG_FUN, UriKind.RelativeOrAbsolute));
             } else {
-                //nothing found
-                displayImage.Source = new BitmapImage(new Uri(@"data\notfound.jpg", UriKind.RelativeOrAbsolute));
+                imageToDisplay = new BitmapImage(new Uri(NOT_FOUND_IMG, UriKind.RelativeOrAbsolute));
             }
-
-            Cursor = Cursors.Arrow;
-            waitImageBorder.Visibility = Visibility.Hidden;
-            simpleSound.Stop();
         }
 
+        /// <summary>
+        /// Moves the window when clicked
+        /// </summary>
+        /// <param name="sender">Sender</param>
+        /// <param name="e">args</param>
         private void WindowMouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
             DragMove();
         }
 
+        /// <summary>
+        /// Main search button for the program
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Button_Click(object sender, RoutedEventArgs e) {
-            if(pathwayField.Text != string.Empty) {
-                getPathwayImage();
+            SearchTerm st;
+            if(CompoundNameField.Text == string.Empty) {
+                st = SearchTerm.pathway;
             } else {
-                getStuff();
+                st = SearchTerm.compound;
             }
-            if (playSound) {
+            ImageBorder.Visibility = Visibility.Hidden;
+            GetFromKegg(st);
+
+            if (FunMode) {
                 playSimpleSound();
+                waitImageBorder.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                
+                waitImageBorderNoFun.Visibility = Visibility.Visible;
             }
         }
 
+        /// <summary>
+        /// Plays a simple sound
+        /// </summary>
         private void playSimpleSound() {
             simpleSound.Play();
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
+        /// <summary>
+        /// Property changed notifier
+        /// </summary>
+        /// <param name="info"></param>
         private void NotifyPropertyChanged(String info) {
             if (PropertyChanged != null) {
                 PropertyChanged(this, new PropertyChangedEventArgs(info));
             }
         }
 
+        /// <summary>
+        /// Method runs when checkbox is checked. Initiate fun mode.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void IsMuted_Checked(object sender, RoutedEventArgs e) {
-            playSound = (bool) IsMuted.IsChecked;
+            FunMode = true;
+            
         }
 
+        /// <summary>
+        /// Method runs when checkbox is unchecked. Turn off fun mode.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void IsMuted_UnChecked(object sender, RoutedEventArgs e)
+        {
+            FunMode = false;
+        }
+
+        /// <summary>
+        /// Enum representing the search term
+        /// </summary>
+        private enum SearchTerm
+        {
+            pathway, compound
+        }
+
+        /// <summary>
+        /// Enum represendting the FileIO Type
+        /// </summary>
+        private enum fileIoType
+        {
+            Save,Load
+        }
+
+        /// <summary>
+        /// Close button action
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        /// <summary>
+        /// Minimize button action
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Button_Click_2(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        /// <summary>
+        /// Loads the pathways into the list
+        /// </summary>
         private void loadPathways() {
             Pathways.Add("Glycolysis / Gluconeogenesis");
             Pathways.Add("Citrate cycle (TCA cycle)");
@@ -697,7 +845,5 @@ namespace MetaboliteViewer {
             Pathways.Add("N-Metyl-D-aspartic acid receptor antagonists");
 
         }
-
-
     }
 }
