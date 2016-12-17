@@ -32,6 +32,7 @@ namespace MetaboliteViewer {
         private static readonly string IMG_FOLDER = DATA_FOLDER + @"Images\";
         private static readonly string SAVED_COMPOUND_LIST = TEMP_FOLDER + @"SavedList.dat";
         private static readonly string NOT_FOUND_IMG = DATA_FOLDER + @"NotFound.png";
+        private static readonly string NOT_FOUND_IMG_FUN = DATA_FOLDER + @"notfound.jpg";
         private System.Media.SoundPlayer simpleSound = new System.Media.SoundPlayer(DATA_FOLDER + @"rur4t.wav");
         public static string LOADING { get; set; } = DATA_FOLDER + @"magnify.gif";
         public static string LOADINGFUN { get; set; } = DATA_FOLDER + @"giphy.gif";
@@ -127,85 +128,87 @@ namespace MetaboliteViewer {
         /// <returns></returns>
         private async Task GetFromKegg(SearchTerm st)
         {
-            Cursor = Cursors.AppStarting;
+            try {
+                Cursor = Cursors.AppStarting;
 
-            string result;
-            string userInput;
-            string baseURL = "http://rest.kegg.jp/list/";
-            string databaseID = string.Empty;
-            int subStringStart;
-            int substringLength;
+                string result;
+                string userInput;
+                string baseURL = "http://rest.kegg.jp/list/";
+                string databaseID = string.Empty;
+                int subStringStart;
+                int substringLength;
 
-            if (st == SearchTerm.compound)
-            {
-                userInput = CompoundNameField.Text;
-                baseURL += @"compound";
-                substringLength = 6;
-                subStringStart = 4;
-            }
-            else
-            {
-                userInput = pathwayField.Text;
-                baseURL += @"pathway";
-                subStringStart = 5;
-                substringLength = 8;
-                
-            }
-
-            using(HttpClient client = new HttpClient())
-            {
-                result = await client.GetStringAsync(baseURL);
-            }
-
-            string[] databaseRowArray = result.Split('\n');
-            string pattern = @"\s" + userInput + @";";
-            foreach (string item in databaseRowArray)
-            {
-                string tempItem = item;
-                tempItem += ";";
-                if (Regex.IsMatch(tempItem, pattern, RegexOptions.IgnoreCase))
+                if (st == SearchTerm.compound)
                 {
-                    //we got it fam
-                    databaseID = item.Substring(subStringStart, substringLength);
-                    break;
-                }
-            }
-
-            if (!databaseID.Equals(string.Empty))
-            {
-                string geturl = "http://rest.kegg.jp/get/" + databaseID + "//image";
-                using (WebClient client = new WebClient())
-                {
-                    if (!File.Exists(TEMP_FOLDER + databaseID + ".gif"))
-                    {
-                        if (!Directory.Exists(TEMP_FOLDER))
-                        {
-                            //create dir
-                            Directory.CreateDirectory(TEMP_FOLDER);
-                        }
-                        client.DownloadFile(new Uri(geturl), TEMP_FOLDER + databaseID + ".gif");
-                    }
-                    displayImage.Source = new BitmapImage(new Uri(TEMP_FOLDER + databaseID + ".gif", UriKind.RelativeOrAbsolute));
-                }
-            }
-            else
-            {
-                //nothing found
-                Uri notFoundImage;
-                if (FunMode)
-                {
-                    notFoundImage = new Uri(@"data\notfound.jpg", UriKind.RelativeOrAbsolute);
-                    displayImage.MaxHeight = 10000;
-                    displayImage.MaxWidth = 10000;
+                    userInput = CompoundNameField.Text;
+                    baseURL += @"compound";
+                    substringLength = 6;
+                    subStringStart = 4;
                 }
                 else
                 {
-                    displayImage.MaxHeight = 400;
-                    displayImage.MaxWidth = 400;
-                    notFoundImage = new Uri(NOT_FOUND_IMG, UriKind.RelativeOrAbsolute);
+                    userInput = pathwayField.Text;
+                    baseURL += @"pathway";
+                    subStringStart = 5;
+                    substringLength = 8;
+                
                 }
 
-                displayImage.Source = new BitmapImage(notFoundImage);
+                //make our web request
+                using(HttpClient client = new HttpClient())
+                {
+                    result = await client.GetStringAsync(baseURL);
+                }
+
+                //split the string result and extract the database ID
+                string[] databaseRowArray = result.Split('\n');
+                string pattern = @"\s" + userInput + @";";
+                foreach (string item in databaseRowArray)
+                {
+                    string tempItem = item;
+                    tempItem += ";";
+                    if (Regex.IsMatch(tempItem, pattern, RegexOptions.IgnoreCase))
+                    {
+                        //we got it fam
+                        databaseID = item.Substring(subStringStart, substringLength);
+                        break;
+                    }
+                }
+
+                //make the web request to get an image 
+                BitmapImage imageToDisplay = null;
+                if (!databaseID.Equals(string.Empty))
+                {
+                    string geturl = "http://rest.kegg.jp/get/" + databaseID + "//image";
+                    try {
+                        using (WebClient client = new WebClient()) {
+                            if (!File.Exists(TEMP_FOLDER + databaseID + ".gif")) {
+                                if (!Directory.Exists(TEMP_FOLDER)) {
+                                    //create dir
+                                    Directory.CreateDirectory(TEMP_FOLDER);
+                                }
+                                client.DownloadFile(new Uri(geturl), TEMP_FOLDER + databaseID + ".gif");
+                            }
+                            imageToDisplay = new BitmapImage(new Uri(TEMP_FOLDER + databaseID + ".gif", UriKind.RelativeOrAbsolute));
+                        }
+                    } catch (Exception ex){
+                        //problem downloading file
+                        setNotFoundImage(ref imageToDisplay);
+                    }
+
+                }
+                else
+                {
+                    //database id could not be found
+                    setNotFoundImage(ref imageToDisplay);
+                }
+
+                displayImage.MaxHeight = imageToDisplay.PixelHeight;
+                displayImage.MaxWidth = imageToDisplay.PixelWidth;
+                displayImage.Source = imageToDisplay;
+
+            } catch (Exception) {
+                MessageBox.Show("Something happened...");
             }
 
             Cursor = Cursors.Arrow;
@@ -213,7 +216,18 @@ namespace MetaboliteViewer {
             waitImageBorderNoFun.Visibility = Visibility.Hidden;
             ImageBorder.Visibility = Visibility.Visible;
             simpleSound.Stop();
+        }
 
+        /// <summary>
+        /// Method will set the passed in bitmap to have the correct not found image.
+        /// </summary>
+        /// <param name="imageToDisplay">Bitmap image to set, passed by reference</param>
+        private void setNotFoundImage(ref BitmapImage imageToDisplay) {
+            if (FunMode) {
+                imageToDisplay = new BitmapImage(new Uri(NOT_FOUND_IMG_FUN, UriKind.RelativeOrAbsolute));
+            } else {
+                imageToDisplay = new BitmapImage(new Uri(NOT_FOUND_IMG, UriKind.RelativeOrAbsolute));
+            }
         }
 
         /// <summary>
@@ -232,13 +246,14 @@ namespace MetaboliteViewer {
         /// <param name="e"></param>
         private void Button_Click(object sender, RoutedEventArgs e) {
             SearchTerm st;
-            if(pathwayField.Text != string.Empty) {
+            if(CompoundNameField.Text == string.Empty) {
                 st = SearchTerm.pathway;
             } else {
                 st = SearchTerm.compound;
             }
             ImageBorder.Visibility = Visibility.Hidden;
             GetFromKegg(st);
+
             if (FunMode) {
                 playSimpleSound();
                 waitImageBorder.Visibility = Visibility.Visible;
