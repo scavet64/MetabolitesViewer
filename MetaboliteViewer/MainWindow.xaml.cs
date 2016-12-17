@@ -8,10 +8,8 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.IO;
 using System.Collections.Generic;
-using System.Windows.Data;
 using System.ComponentModel;
 using System.Threading;
-using System.Xml.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace MetaboliteViewer {
@@ -21,38 +19,30 @@ namespace MetaboliteViewer {
     /// </summary>
     public partial class MainWindow : Window {
 
-        private System.Media.SoundPlayer simpleSound = new System.Media.SoundPlayer(@"Data\rur4t.wav");
-        public List<string> TestItems { get; set; } = new List<string>();
+        public event PropertyChangedEventHandler PropertyChanged;
+        public List<string> Compounds { get; set; } = new List<string>();
         public List<string> Pathways { get; set; } = new List<string>();
-        private string _statusMessage;
-        public string StatusMessage {
-            get {
-                return _statusMessage;
-            }
-            set {
-                _statusMessage = value;
-                NotifyPropertyChanged("LastName");
-            }
-        }
-        public string TestText { get; set; }
         private bool isFinished = false;
         private bool FunMode = false;
 
+        //readonly path strings
         private static readonly string PROGRAM_DIRECTORY = Directory.GetCurrentDirectory();
         private static readonly string DATA_FOLDER = PROGRAM_DIRECTORY + @"\Data\";
         private static readonly string TEMP_FOLDER = DATA_FOLDER + @"Temp\";
         private static readonly string IMG_FOLDER = DATA_FOLDER + @"Images\";
         private static readonly string SAVED_COMPOUND_LIST = TEMP_FOLDER + @"SavedList.dat";
         private static readonly string NOT_FOUND_IMG = DATA_FOLDER + @"NotFound.png";
+        private System.Media.SoundPlayer simpleSound = new System.Media.SoundPlayer(DATA_FOLDER + @"rur4t.wav");
         public static string LOADING { get; set; } = DATA_FOLDER + @"magnify.gif";
         public static string LOADINGFUN { get; set; } = DATA_FOLDER + @"giphy.gif";
+        public static string CLOSEIMAGE { get; set; } = DATA_FOLDER + @"fileclose.png";
+        public static string MINIMAGE { get; set; } = DATA_FOLDER + @"minus-7-xxl.png";
 
+        /// <summary>
+        /// Constructor for the window
+        /// </summary>
         public MainWindow() {
             InitializeComponent();
-            TestItems.Add("H2O");
-            StatusMessage = "TESTING";
-            LabelTest.DataContext = _statusMessage;
-            TestText = "TESTIHG";
 
             loadPathways();
             Thread myThread = new Thread(new ThreadStart(loadList));
@@ -87,7 +77,7 @@ namespace MetaboliteViewer {
                         string[] splitBySemi = splitByTab[1].Split(';');
                         foreach (string compound in splitBySemi)
                         {
-                            TestItems.Add(compound.Trim());
+                            Compounds.Add(compound.Trim());
                         }
                     }
                 }
@@ -101,6 +91,10 @@ namespace MetaboliteViewer {
             isFinished = true;
         }
 
+        /// <summary>
+        /// Main method for accessing or modifying the saved list of compounds.
+        /// </summary>
+        /// <param name="type">The FileIO action you want to preform</param>
         private void loadOrSaveCompoundListToFile(fileIoType type)
         {
             try
@@ -115,11 +109,11 @@ namespace MetaboliteViewer {
                     BinaryFormatter bin = new BinaryFormatter();
                     if(type == fileIoType.Load)
                     {
-                        TestItems = (List<string>)bin.Deserialize(stream);
+                        Compounds = (List<string>)bin.Deserialize(stream);
                     }
                     else
                     {
-                        bin.Serialize(stream, TestItems);
+                        bin.Serialize(stream, Compounds);
                     }
                 }
             }
@@ -256,38 +250,82 @@ namespace MetaboliteViewer {
             }
         }
 
+        /// <summary>
+        /// Plays a simple sound
+        /// </summary>
         private void playSimpleSound() {
             simpleSound.Play();
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
+        /// <summary>
+        /// Property changed notifier
+        /// </summary>
+        /// <param name="info"></param>
         private void NotifyPropertyChanged(String info) {
             if (PropertyChanged != null) {
                 PropertyChanged(this, new PropertyChangedEventArgs(info));
             }
         }
 
+        /// <summary>
+        /// Method runs when checkbox is checked. Initiate fun mode.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void IsMuted_Checked(object sender, RoutedEventArgs e) {
             FunMode = true;
             
         }
 
+        /// <summary>
+        /// Method runs when checkbox is unchecked. Turn off fun mode.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void IsMuted_UnChecked(object sender, RoutedEventArgs e)
         {
             FunMode = false;
         }
 
+        /// <summary>
+        /// Enum representing the search term
+        /// </summary>
         private enum SearchTerm
         {
             pathway, compound
         }
 
+        /// <summary>
+        /// Enum represendting the FileIO Type
+        /// </summary>
         private enum fileIoType
         {
             Save,Load
         }
 
+        /// <summary>
+        /// Close button action
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        /// <summary>
+        /// Minimize button action
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Button_Click_2(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        /// <summary>
+        /// Loads the pathways into the list
+        /// </summary>
         private void loadPathways() {
             Pathways.Add("Glycolysis / Gluconeogenesis");
             Pathways.Add("Citrate cycle (TCA cycle)");
@@ -791,16 +829,6 @@ namespace MetaboliteViewer {
             Pathways.Add("Neurotransmitter transporter inhibitors");
             Pathways.Add("N-Metyl-D-aspartic acid receptor antagonists");
 
-        }
-
-        private void Button_Click_1(object sender, RoutedEventArgs e)
-        {
-            Close();
-        }
-
-        private void Button_Click_2(object sender, RoutedEventArgs e)
-        {
-            WindowState = WindowState.Minimized;
         }
     }
 }
